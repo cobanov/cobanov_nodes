@@ -93,27 +93,17 @@ class KSamplerAdvancedTile:
                 bound_method = make_bound_method(self.replacement_conv2d_forward, layer)
                 layer._conv_forward = bound_method.__get__(layer, type(layer))
 
-    def replacement_conv2d_forward(
-        self, layer, input: torch.Tensor, weight: torch.Tensor, bias: [torch.Tensor]
-    ):
+    def replacement_conv2d_forward(self, layer, input: torch.Tensor, weight: torch.Tensor, bias: [torch.Tensor]):
         """Replacement method for convolutional forward pass."""
-        working = torch.nn.functional.pad(
-            input, layer.paddingX, mode=layer.padding_modeX
-        )
-        working = torch.nn.functional.pad(
-            working, layer.paddingY, mode=layer.padding_modeY
-        )
-        return torch.nn.functional.conv2d(
-            working, weight, bias, layer.stride, (0, 0), layer.dilation, layer.groups
-        )
+        working = torch.nn.functional.pad(input, layer.paddingX, mode=layer.padding_modeX)
+        working = torch.nn.functional.pad(working, layer.paddingY, mode=layer.padding_modeY)
+        return torch.nn.functional.conv2d(working, weight, bias, layer.stride, (0, 0), layer.dilation, layer.groups)
 
     def restore_conv2d_methods(self, model):
         """Restore the original convolution methods to Conv2d layers in the model."""
         for layer in model.modules():
             if isinstance(layer, torch.nn.Conv2d):
-                layer._conv_forward = torch.nn.Conv2d._conv_forward.__get__(
-                    layer, torch.nn.Conv2d
-                )
+                layer._conv_forward = torch.nn.Conv2d._conv_forward.__get__(layer, torch.nn.Conv2d)
 
     def sample(
         self,
@@ -172,11 +162,7 @@ class CircularVAEDecode:
     CATEGORY = "latent"
 
     def decode(self, vae, samples):
-        for layer in [
-            layer
-            for layer in vae.first_stage_model.modules()
-            if isinstance(layer, torch.nn.Conv2d)
-        ]:
+        for layer in [layer for layer in vae.first_stage_model.modules() if isinstance(layer, torch.nn.Conv2d)]:
             layer.padding_mode = "circular"
         return (vae.decode(samples["samples"]),)
 
